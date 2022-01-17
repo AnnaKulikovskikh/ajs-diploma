@@ -13,4 +13,14 @@ export default class PositionedCharacter {
     this.character = character;
     this.position = position;
   }
+
+  static getPositions(team, access) {
+    let positions = [];
+    for (let pers of team) {
+      const pos = access[Math.floor(Math.random() * access.length)];
+      access.splice(access.indexOf(pos), 1);
+      positions.push(new PositionedCharacter(pers, pos));
+    }
+    return positions;
+  }
 }

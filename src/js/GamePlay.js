@@ -1,4 +1,5 @@
 import { calcHealthLevel, calcTileType } from './utils';
+import cursors from './cursors';
 
 export default class GamePlay {
   constructor() {
@@ -200,6 +201,17 @@ export default class GamePlay {
     this.cells[index].title = message;
   }
 
+  addToolTip(cell) {
+    const toolTip = document.createElement('div');
+    toolTip.className = 'toolTip';
+    cell.appendChild(toolTip)
+  }
+  deleteToolTip(cell) {
+    const toolTip = cell.querySelector('.toolTip');
+    toolTip.remove();
+    cell.removeAttribute('title')
+  }
+
   hideCellTooltip(index) {
     this.cells[index].title = '';
   }
@@ -219,8 +231,8 @@ export default class GamePlay {
     });
   }
 
-  setCursor(cursor) {
-    this.boardEl.style.cursor = cursor;
+  setCursor(cursors) {
+    this.boardEl.style.cursor = cursors;
   }
 
   checkBinding() {
