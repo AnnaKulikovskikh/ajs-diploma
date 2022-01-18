@@ -24,6 +24,7 @@ export default class GameController {
     this.select = -1;// индекс с другим выбранным полем
     this.possibleMove = []; //куда может пойти
     this.possibleAttack = []; //куда может атакавать
+    this.turn = 1; // 1 - очередь игрока, 0 - очередь компютера
   }
 
   init() {
@@ -43,7 +44,6 @@ export default class GameController {
     let pos2 = PositionedCharacter.getPositions(compTeam, [6,7,14,15,22,23,30,31,38,39,46,47,54,55,62,63]);
     pos1.forEach(item => this.myPositions.push(item['position'])); //наполнение this.myPositions - позиции игрока
     pos2.forEach(item => this.compPositions.push(item['position'])); // наполнение this.compPositions - позиции компьюетра
-    //this.turn('player')
     this.gamePlay.positions = pos1.concat(pos2);
     this.gamePlay.positions.forEach(item => this.charge.push(item['position'])); // наполнение this.charge - все занятые позиции
 
@@ -69,7 +69,6 @@ export default class GameController {
     if (this.myPositions.includes(index)) {
       if (this.chosen !== -1) { //убираем выделение доугого перса. если оно есть
         this.gamePlay.deselectCell(this.chosen);
-        this.chosen = -1;
       }
       this.gamePlay.selectCell(index); 
       this.chosen = index;
@@ -79,25 +78,14 @@ export default class GameController {
     let pers = '';
     this.gamePlay.positions.forEach(item => {
       if (item.position === index) { 
-        pers = item.character.type ;
+        if (item.character.type === 'swordsman' || item.character.type === 'bowman' || item.character.type === 'magician') {
+          pers = item.character.type ;
+        }   
       } 
     })
     
     //куда перс может пойти или атаковать
-    if (pers === 'swordsman') { 
-      this.possibleMove = this.farCounter(index, 4);
-      this.possibleAttack = this.farCounter(index, 1);
-    }
-
-    if (pers === 'bowman') {
-      this.possibleMove = this.farCounter(index, 2);
-      this.possibleAttack = this.farCounter(index, 2);
-    }
-
-    if (pers === 'magician') {
-      this.possibleMove = this.farCounter(index, 1);
-      this.possibleAttack = this.farCounter(index, 4);
-    }
+    this.moveAttack(pers, index); //заполняет массивы this.possibleMove и this.possibleAttack
 
     if (this.chosen != -1) {
       //передвижение
@@ -114,33 +102,25 @@ export default class GameController {
         this.gamePlay.redrawPositions(this.gamePlay.positions);
         this.gamePlay.deselectCell(this.chosen);
         this.chosen = -1;
-        this.compAction;
+        this.turn = 0;
+        this.compAction();
       } //конец передвижение
 
       //атака
       if (this.possibleAttack.includes(index) && this.compPositions.includes(index)) {
-        let attacker = -1;
-        let defender = -1;
-        for (let i = 0 ; i < this.gamePlay.positions.length; i ++) {
-          if (this.gamePlay.positions[i].position === this.chosen) { attacker = i};
-          if (this.gamePlay.positions[i].position === index) { defender = i};
-        }
-        let damage = Math.max(this.gamePlay.positions[attacker].character.attack - this.gamePlay.positions[defender].character.defence, this.gamePlay.positions[attacker].character.attack * 0.1);
-        this.gamePlay.positions[defender].character.health -= damage;
-        if (this.gamePlay.positions[defender].character.health < 0 ) {
-          console.log(this.gamePlay.positions[defender].position);
-          for (let i = 0; i < this.compPositions.length; i ++) {
-            if (this.compPositions[i] === this.gamePlay.positions[defender].position) {
-              this.compPositions.splice(i, 1);    
-            }
-          }
-          this.gamePlay.positions.splice(defender, 1);
-        } 
-        this.gamePlay.redrawPositions(this.gamePlay.positions);
+        // let attacker = -1; //позиции атакующего и защищающегося
+        // let defender = -1;
+        // for (let i = 0 ; i < this.gamePlay.positions.length; i ++) {
+        //   if (this.gamePlay.positions[i].position === this.chosen) { attacker = i};
+        //   if (this.gamePlay.positions[i].position === index) { defender = i};
+        // }
+        // this.attack(attacker, defender);
+
+        this.attack(this.chosen, index);
         this.gamePlay.deselectCell(this.chosen);
         this.chosen = -1;
-        console.log('this.compPositions ' + this.compPositions);
-        this.compAction;
+        this.turn = 0;
+        this.compAction();
       }  //конец атака
     }
 
@@ -182,6 +162,49 @@ export default class GameController {
     if (this.select !== -1) { this.gamePlay.deselectCell(this.select) };
   }
 
+  attack(attackInd, defendInd) {
+    let attacker = -1; //позиции атакующего и защищающегося
+    let defender = -1;
+    for (let i = 0 ; i < this.gamePlay.positions.length; i ++) {
+      if (this.gamePlay.positions[i].position === attackInd) { attacker = i};
+      if (this.gamePlay.positions[i].position === defendInd) { defender = i};
+    }
+
+    let damage = Math.max(this.gamePlay.positions[attacker].character.attack - this.gamePlay.positions[defender].character.defence, this.gamePlay.positions[attacker].character.attack * 0.1);
+    this.gamePlay.positions[defender].character.health -= damage;
+    if (this.gamePlay.positions[defender].character.health < 0 ) {
+      let arr = [];
+      if (this.turn === 1) { arr = this.compPositions} else { arr = this.myPositions};
+      for (let i = 0; i < arr.length; i ++) {
+        if (arr[i] === this.gamePlay.positions[defender].position) {
+          if (this.turn === 1) { this.compPositions.splice(i, 1) } else { this.myPositions.splice(i, 1)}
+        }
+      }
+      this.gamePlay.positions.splice(defender, 1);
+      //удалить defender из this.charge
+    } 
+    this.gamePlay.redrawPositions(this.gamePlay.positions);
+  }
+
+  //куда выбранный перс может ходить и атаковать
+  moveAttack (pers, index) {
+    if (pers === 'swordsman' || pers === 'undead') { 
+      this.possibleMove = this.farCounter(index, 4);
+      this.possibleAttack = this.farCounter(index, 1);
+    }
+
+    if (pers === 'bowman' || pers === 'vampire') {
+      this.possibleMove = this.farCounter(index, 2);
+      this.possibleAttack = this.farCounter(index, 2);
+    }
+
+    if (pers === 'magician' || pers === 'daemon') {
+      this.possibleMove = this.farCounter(index, 1);
+      this.possibleAttack = this.farCounter(index, 4);
+    }
+  }
+
+  //рассчет возможных полей для хода или атаки
   farCounter(pos, n) {
     let set1 = new Set();
     
@@ -197,8 +220,33 @@ export default class GameController {
   }
 
   compAction () {
-    
-  }
+    //случайный выбор персонажа
+    let compPers = '';
+    const pos = this.compPositions[Math.floor(Math.random() * this.compPositions.length)];
+    this.gamePlay.positions.forEach(item => {
+      if (item.position === pos) { 
+          compPers = item.character.type ;
+      }  
+    })
+
+    //куда может идти и атаковать
+    this.moveAttack(compPers, pos);
+  
+    //проверить возможна ли атака
+    let attackIndex = -1;
+    for (let i of this.myPositions) {
+      if (this.possibleAttack.includes(i)) { attackIndex = i}
+    }
+
+    if (attackIndex != -1) {
+      this.attack(pos, attackIndex);
+    }
+    //если да - атаковать
+
+    //console.log(this.possibleMove);
+    //console.log(attackIndex);
+    this.turn = 1;
+  }// конец compAction
 
   getTooltip(index) {
 
@@ -216,7 +264,7 @@ export default class GameController {
         const message = `${level} ${char[position].character.level} ${attack} ${char[position].character.attack} ${defense} ${char[position].character.defence} ${health}  ${char[position].character.health}`
         this.gamePlay.showCellTooltip(message, index)
         if(!cell.querySelectorAll(".toolTip").length > 0) {
-          this.gamePlay.addToolTip(cell)
+          this.gamePlay.addToolTip(cell) //else найти все остальные tollTip и убрать
         }
       }
     }
