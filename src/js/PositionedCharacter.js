@@ -15,8 +15,8 @@ export default class PositionedCharacter {
   }
 
   static getPositions(team, access) {
-    let positions = [];
-    for (let pers of team) {
+    const positions = [];
+    for (const pers of team) {
       const pos = access[Math.floor(Math.random() * access.length)];
       access.splice(access.indexOf(pos), 1);
       positions.push(new PositionedCharacter(pers, pos));

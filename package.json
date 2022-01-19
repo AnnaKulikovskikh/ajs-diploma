@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "webpack serve --mode development",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --coverage",  
     "build": "webpack --mode production",
-    "lint": "eslint"
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
