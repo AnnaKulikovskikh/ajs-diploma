@@ -1,8 +1,6 @@
 import themes from './themes';
-import gamePlay from './GamePlay';
-import { generateTeam, getTeamWithPosition } from './generators';
+import { generateTeam } from './generators';
 import PositionedCharacter from './PositionedCharacter';
-import GameStateService from './GameStateService';
 import GameState from './GameState';
 import bowman from './Bowman';
 import swordsman from './Swordsman';
@@ -10,7 +8,6 @@ import magician from './Magician';
 import undead from './Undead';
 import vampire from './Vampire';
 import daemon from './Daemon';
-import GamePlay from './GamePlay';
 
 export default class GameController {
   constructor(gamePlay, stateService) {
@@ -68,13 +65,14 @@ export default class GameController {
     }
 
     this.gamePlay.drawUi(theme);
-
-    const pos1 = PositionedCharacter.getPositions(this.myTeam, [0, 1, 8, 9, 16, 17, 24, 25, 32, 33, 40, 41, 48, 49, 56, 57]);
-    const pos2 = PositionedCharacter.getPositions(this.compTeam, [6, 7, 14, 15, 22, 23, 30, 31, 38, 39, 46, 47, 54, 55, 62, 63]);
-    pos1.forEach((item) => this.myPositions.push(item.position)); // наполнение this.myPositions - позиции игрока
-    pos2.forEach((item) => this.compPositions.push(item.position)); // наполнение this.compPositions - позиции компьюетра
+    const arr1 = [0, 1, 8, 9, 16, 17, 24, 25, 32, 33, 40, 41, 48, 49, 56, 57];
+    const pos1 = PositionedCharacter.getPositions(this.myTeam, arr1);
+    const arr0 = [6, 7, 14, 15, 22, 23, 30, 31, 38, 39, 46, 47, 54, 55, 62, 63];
+    const pos2 = PositionedCharacter.getPositions(this.compTeam, arr0);
+    pos1.forEach((item) => this.myPositions.push(item.position)); // myPositions -поз игрока
+    pos2.forEach((item) => this.compPositions.push(item.position)); // compPositions -поз компа
     this.gamePlay.positions = pos1.concat(pos2);
-    this.gamePlay.positions.forEach((item) => this.charge.push(item.position)); // наполнение this.charge - все занятые позиции
+    this.gamePlay.positions.forEach((item) => this.charge.push(item.position));
     this.myTeam = [];
     this.compTeam = [];
     this.gamePlay.redrawPositions(this.gamePlay.positions);
@@ -169,7 +167,7 @@ export default class GameController {
     // куда перс может пойти или атаковать
     this.moveAttack(pers, index); // заполняет массивы this.possibleMove и this.possibleAttack
 
-    if (this.chosen != -1) {
+    if (this.chosen !== -1) {
       // передвижение
       if (this.possibleMove.includes(index) && !this.charge.includes(index)) {
         this.move(this.chosen, index);
@@ -196,10 +194,10 @@ export default class GameController {
   onCellEnter(index) {
     // TODO: react to mouse enter
     // инфо о перса
-    const cell = this.gamePlay.cells[index];
+
     if (this.charge.includes(index)) this.getTooltip(index);
 
-    if (this.chosen != -1) {
+    if (this.chosen !== -1) {
       // передвижение
       if (this.possibleMove.includes(index) && !this.charge.includes(index)) {
         this.gamePlay.setCursor('pointer');
@@ -208,7 +206,8 @@ export default class GameController {
       }
 
       // недопустимое действие
-      if (!this.possibleMove.includes(index) || this.compPositions.includes(index) && this.possibleMove.includes(index) && !this.possibleAttack.includes(index)) {
+      const enFar = this.compPositions.includes(index) && this.possibleMove.includes(index) && !this.possibleAttack.includes(index);
+      if (!this.possibleMove.includes(index) || enFar) {
         this.gamePlay.setCursor('not-allowed');
       }
 
@@ -221,7 +220,7 @@ export default class GameController {
     }
   } // конец onCellEnter
 
-  onCellLeave(index) {
+  onCellLeave() {
     // TODO: react to mouse leave
     // if (this.selected != index) {this.gamePlay.deselectCell(index)}
     this.gamePlay.setCursor('auto');
@@ -254,19 +253,23 @@ export default class GameController {
   attack(attackInd, defendInd) {
     let attacker = -1; // позиции атакующего и защищающегося
     let defender = -1;
-    for (let i = 0; i < this.gamePlay.positions.length; i++) {
+    for (let i = 0; i < this.gamePlay.positions.length; i += 1) {
       if (this.gamePlay.positions[i].position === attackInd) { attacker = i; }
       if (this.gamePlay.positions[i].position === defendInd) { defender = i; }
     }
 
-    const damage = Math.max(this.gamePlay.positions[attacker].character.attack - this.gamePlay.positions[defender].character.defence, this.gamePlay.positions[attacker].character.attack * 0.1);
+    const att = this.gamePlay.positions[attacker].character.attack;
+    const def = this.gamePlay.positions[defender].character.defence;
+    const damage = Math.max(att - def, att * 0.1);
     this.gamePlay.positions[defender].character.health -= damage;
     if (this.gamePlay.positions[defender].character.health <= 0) {
       let arr = [];
       if (this.turn === 1) { arr = this.compPositions; } else { arr = this.myPositions; }
-      for (let i = 0; i < arr.length; i++) {
+      for (let i = 0; i < arr.length; i += 1) {
         if (arr[i] === this.gamePlay.positions[defender].position) {
-          if (this.turn === 1) { this.compPositions.splice(i, 1); } else { this.myPositions.splice(i, 1); }
+          if (this.turn === 1) {
+            this.compPositions.splice(i, 1);
+          } else { this.myPositions.splice(i, 1); }
         }
       }
       this.gamePlay.positions.splice(defender, 1);
@@ -331,12 +334,12 @@ export default class GameController {
   farCounter(pos, n) {
     const set1 = new Set();
 
-    for (let i = 0; i < n + 1; i++) {
-      for (let j = 0; j < n + 1; j++) {
-        if (pos - 8 * i >= 0 && pos % 8 - j >= 0) { set1.add(pos - 8 * i - j); }
-        if (pos - 8 * i >= 0 && pos % 8 + j < 8) { set1.add(pos - 8 * i + j); }
-        if (pos % 8 - j >= 0 && pos + 8 * i < 64) { set1.add(pos + 8 * i - j); }
-        if (pos + 8 * i < 64 && pos % 8 + j < 8) { set1.add(pos + 8 * i + j); }
+    for (let i = 0; i < n + 1; i += 1) {
+      for (let j = 0; j < n + 1; j += 1) {
+        if (pos - (8 * i) >= 0 && (pos % 8) - j >= 0) { set1.add(pos - (8 * i) - j); }
+        if (pos - (8 * i) >= 0 && (pos % 8) + j < 8) { set1.add(pos - (8 * i) + j); }
+        if ((pos % 8) - j >= 0 && pos + (8 * i) < 64) { set1.add(pos + (8 * i) - j); }
+        if (pos + (8 * i) < 64 && (pos % 8) + j < 8) { set1.add(pos + (8 * i) + j); }
       }
     }
     return [...set1].sort((a, b) => a - b);
@@ -403,7 +406,7 @@ export default class GameController {
   // расстояние между полями а и б
   distance(a, b) {
     const dist1 = Math.abs(Math.trunc(a / 8) - Math.trunc(b / 8));
-    const dist2 = Math.abs(a % 8 - b % 8);
+    const dist2 = Math.abs((a % 8) - (b % 8));
     if (dist1 > dist2) return dist1;
     return dist2;
   }
