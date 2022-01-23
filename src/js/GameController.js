@@ -221,6 +221,19 @@ export default class GameController {
     }
   } // конец onCellEnter
 
+  // курсор для тестов
+  onCellEnterCursor(index) {
+    const enFar1 = this.compPositions.includes(index) && this.possibleMove.includes(index);
+    const enFar = enFar1 && !this.possibleAttack.includes(index);
+    if (this.chosen !== -1) {
+      if (this.myPositions.includes(index)) { return 'pointer'; }
+      if (this.possibleMove.includes(index) && !this.charge.includes(index)) { return 'pointer'; }
+      if (this.possibleAttack.includes(index) && this.compPositions.includes(index)) { return 'crosshair'; }
+      if (!this.possibleMove.includes(index) || enFar) { return 'not-allowed'; }
+    }
+    return 'auto';
+  }
+
   onCellLeave() {
     // TODO: react to mouse leave
     // if (this.selected != index) {this.gamePlay.deselectCell(index)}
@@ -412,6 +425,15 @@ export default class GameController {
     return dist2;
   }
 
+  picture(obj) {
+    const codeLevel = String.fromCodePoint(0x1F396);
+    const codeAtack = String.fromCodePoint(0x2694);
+    const codeDefence = String.fromCodePoint(0x1F6E1);
+    const codeHealth = String.fromCodePoint(0x2764);
+    const result = `${codeLevel}${obj.level} ${codeAtack} ${obj.attack} ${codeDefence} ${obj.defence} ${codeHealth} ${obj.health}`;
+    return result;
+  }
+
   getTooltip(index) {
     const cell = this.gamePlay.cells[index];
     const char = this.gamePlay.positions;
@@ -422,12 +444,10 @@ export default class GameController {
         if ((GameState.selected !== cell) && (types === 'bowman' || types === 'swordsman' || types === 'magician')) {
           this.gamePlay.setCursor('pointer');
         }
-        const unicodesPic = ['0x1f396', '0x2694', '0x1f6e1', '0x2764'].map((code) => String.fromCodePoint(code));
-        const [level, attack, defense, health] = unicodesPic;
-        const message = `${level} ${char[position].character.level} ${attack} ${char[position].character.attack} ${defense} ${char[position].character.defence} ${health}  ${char[position].character.health}`;
+        const message = this.picture(char[position].character);
         this.gamePlay.showCellTooltip(message, index);
         if (!cell.querySelectorAll('.toolTip').length > 0) {
-          this.gamePlay.addToolTip(cell); // else найти все остальные tollTip и убрать
+          this.gamePlay.addToolTip(cell);
         }
       }
     }
