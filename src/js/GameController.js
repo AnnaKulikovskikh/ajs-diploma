@@ -139,7 +139,7 @@ export default class GameController {
     if (this.level === 4) { theme = themes.mountain; }
     this.gamePlay.drawUi(theme);
     this.gamePlay.redrawPositions(this.gamePlay.positions);
-    if (this.turn === 0) { this.compAction; }
+    // if (this.turn === 0) { this.compAction; }
   }
 
   onCellClick(index) {
@@ -206,7 +206,8 @@ export default class GameController {
       }
 
       // недопустимое действие
-      const enFar = this.compPositions.includes(index) && this.possibleMove.includes(index) && !this.possibleAttack.includes(index);
+      const enFar1 = this.compPositions.includes(index) && this.possibleMove.includes(index);
+      const enFar = enFar1 && !this.possibleAttack.includes(index);
       if (!this.possibleMove.includes(index) || enFar) {
         this.gamePlay.setCursor('not-allowed');
       }
@@ -370,7 +371,7 @@ export default class GameController {
     }
 
     // если да - атаковать
-    if (attackIndex != -1) {
+    if (attackIndex !== -1) {
       this.attack(pos, attackIndex);
     } else {
       const where = this.moveToGoal(pos);
